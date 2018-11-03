@@ -42,8 +42,9 @@ def get_amazon_types():
 
             a = 'b'
 
-        with open('./types_cashe.json', mode='w') as file:
-            json.dump(data, file)
+        if USE_CACHE:
+            with open('./types_cashe.json', mode='w') as file:
+                json.dump(data, file)
         return data
 
 
@@ -72,12 +73,23 @@ def get_prices():
         txt = response.data.decode('UTF-8')
         txt = txt.replace('callback(', '')
         txt = txt[:len(txt) - 2]
-        with open('./prices_cache.json', mode='w') as file:
-            file.write(txt)
-        return json.loads(txt)
+        if USE_CACHE:
+            with open('./prices_cache.json', mode='w') as file:
+                file.write(txt)
+            return json.loads(txt)
     else:
         with open('./prices_cache.json', mode="r") as file:
             return json.load(file)
+
+
+def lambda_handler(event, context):
+    instances = get_amazon_types()
+    prices = get_prices()
+    append_region_prices(instances, prices)
+    return {
+        'statusCode': 200,
+        'body': json.dumps(instances)
+    }
 
 
 
