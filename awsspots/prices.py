@@ -6,9 +6,13 @@ import os
 
 INSTANCES_SPOT_INSTANCE_URL = "http://spot-price.s3.amazonaws.com/spot.js"
 AMAZON_TYPES_URL='https://aws.amazon.com/ec2/instance-types/'
+USE_CACHE = True
+
+if 'USE_CACHE' in os.environ:
+    USE_CACHE = bool(os.environ['USE_CACHE'])
 
 def get_amazon_types():
-    if os.path.exists('./types_cashe.json'):
+    if USE_CACHE and os.path.exists('./types_cashe.json'):
         with open('./types_cashe.json', mode='r') as file:
             return json.load(file)
     else:
@@ -62,7 +66,7 @@ def append_region_prices(instances, prices):
                     instances.append(item)
 
 def get_prices():
-    if not os.path.exists('./prices_cache.json'):
+    if USE_CACHE and not os.path.exists('./prices_cache.json'):
         pool = urllib3.PoolManager()
         response = pool.request('GET', INSTANCES_SPOT_INSTANCE_URL)
         txt = response.data.decode('UTF-8')
