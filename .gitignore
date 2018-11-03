@@ -1,4 +1,5 @@
 # Pycharm settings
 .idea/
 *.iml
-
+prices_cache.json
+types_cashe.json
