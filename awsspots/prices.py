@@ -9,7 +9,7 @@ AMAZON_TYPES_URL='https://aws.amazon.com/ec2/instance-types/'
 USE_CACHE = True
 
 if 'USE_CACHE' in os.environ:
-    USE_CACHE = bool(os.environ['USE_CACHE'])
+    USE_CACHE = os.environ['USE_CACHE'] == 'True'
 
 def get_amazon_types():
     if USE_CACHE and os.path.exists('./types_cashe.json'):
@@ -66,8 +66,12 @@ def append_region_prices(instances, prices):
                     )
                     instances.append(item)
 
+
 def get_prices():
-    if USE_CACHE and not os.path.exists('./prices_cache.json'):
+    if USE_CACHE and os.path.exists('./prices_cache.json'):
+        with open('./prices_cache.json', mode="r") as file:
+            return json.load(file)
+    else:
         pool = urllib3.PoolManager()
         response = pool.request('GET', INSTANCES_SPOT_INSTANCE_URL)
         txt = response.data.decode('UTF-8')
@@ -76,19 +80,35 @@ def get_prices():
         if USE_CACHE:
             with open('./prices_cache.json', mode='w') as file:
                 file.write(txt)
-            return json.loads(txt)
-    else:
-        with open('./prices_cache.json', mode="r") as file:
-            return json.load(file)
+        return json.loads(txt)
+
 
 
 def lambda_handler(event, context):
     instances = get_amazon_types()
     prices = get_prices()
     append_region_prices(instances, prices)
+
+    cpu = 0
+    memory = 0
+
+    if 'cpu' in event:
+        cpu = event['cpu']
+
+    if 'memory' in event:
+        memory = event['memory']
+
+    ret_object = instances
+
+    if cpu > 0:
+        ret_object = [inst for inst in instances if 'cpu' in inst and (inst['cpu'] >= cpu)]
+
+    if memory > 0:
+        ret_object = [inst for inst in ret_object if 'memory' in inst and (inst['memory'] >= (memory -2) and inst['memory'] <= (memory + 2))]
+
     return {
         'statusCode': 200,
-        'body': json.dumps(instances)
+        'body': json.dumps(ret_object)
     }
 
 
